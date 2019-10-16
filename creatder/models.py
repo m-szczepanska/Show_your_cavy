@@ -36,6 +36,11 @@ class User(models.Model):
         creatures = Creature.objects.filter(owner__id=self.id).all()
         return creatures
 
+    @property
+    def get_user_ratings(self):
+        ratings = Review.objects.filter(user__id=self.id).all()
+        return ratings
+
 
 class Creature(models.Model):
     BREED = [
@@ -67,14 +72,17 @@ class Creature(models.Model):
         ('MX', 'Mix'),
         ('AL', 'Albino')
     ]
+    SEX = [('F', 'Female'), ('M', 'Male'), ('NS', 'Not sure')]
     name = models.CharField(max_length=255)
     age = models.IntegerField()
+    sex = models.CharField(max_length=2, choices=SEX, default='F')
     breed = models.CharField(max_length=2, choices=BREED, default='OT')
     color_pattern = models.CharField(
         max_length=2,
         choices=COLOR_AND_PATTERN,
         default='MX'
     )
+    crossed_rainbow_bridge = models.BooleanField(default=False, blank=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
 
     def __unicode__(self):
@@ -82,13 +90,18 @@ class Creature(models.Model):
 
     @property
     def average_rating(self):
+        # TODO: Round to 2 decimal numbers
         all_reviews = Review.objects.filter(creature__id=self.id)
         ratings_count = all_reviews.count()
         # Could also be done with aggregate: https://stackoverflow.com/a/8616400
         ratings_sum = 0
         for obj in all_reviews:
             ratings_sum += obj.rating
-        return ratings_sum / ratings_count
+        if ratings_count != 0:
+            result = ratings_sum / ratings_count
+        else:
+            result = 0
+        return result
 
 
 class Review(models.Model):
@@ -99,6 +112,8 @@ class Review(models.Model):
         (4, '4'),
         (5, '5'),
     )
+    # creature and user should be "unique together"; truncate reviews before
+    # migrating!
     creature = models.ForeignKey(Creature, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     pub_date = models.DateTimeField(auto_now=True)

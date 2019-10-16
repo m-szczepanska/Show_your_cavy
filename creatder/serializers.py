@@ -48,7 +48,7 @@ class CreateUserSerializer(serializers.Serializer):
 
 
 class UpdateUserSerializer(serializers.Serializer):
-    first_name = serializers.CharField(
+    name = serializers.CharField(
         required=True, allow_blank=False, max_length=255)
     login = serializers.CharField(
         required=True, allow_blank=False, max_length=255)
@@ -65,26 +65,50 @@ class UpdateUserSerializer(serializers.Serializer):
         return data
 
 
+class CreateCreatureSerializer(serializers.Serializer):
+    name = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+    age = serializers.IntegerField(max_value=20, min_value=0)
+    sex = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+    breed = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+    color_pattern = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+    crossed_rainbow_bridge = serializers.BooleanField(
+        required=False)
+    owner = GetUserSerializer(many=False)
+
+
+class UpdateCreatureSerializer(serializers.Serializer):
+    name = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+    age = serializers.IntegerField(max_value=20, min_value=0)
+    sex = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+    breed = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+    color_pattern = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+    crossed_rainbow_bridge = serializers.BooleanField(
+        required=False)
+
+
 class GetCreatureSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     name = serializers.CharField(
         required=True, allow_blank=False, max_length=255)
     age = serializers.IntegerField(max_value=20, min_value=0)
+    sex = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
     breed = serializers.CharField(
         required=True, allow_blank=False, max_length=255)
     color_pattern = serializers.CharField(
         required=True, allow_blank=False, max_length=255)
+    crossed_rainbow_bridge = serializers.BooleanField(
+        required=False)
+    average_rating = serializers.FloatField(read_only=True)
     owner = GetUserSerializer(many=False)
-
-
-class CreateCreatureSerializer(serializers.Serializer):
-    name = serializers.CharField(
-        required=True, allow_blank=False, max_length=255)
-    age = serializers.IntegerField(max_value=20, min_value=0)
-    breed = serializers.CharField(
-        required=True, allow_blank=False, max_length=255)
-    color_pattern = serializers.CharField(
-        required=True, allow_blank=False, max_length=255)
 
 
 class GetOwnCreatures(serializers.Serializer):
@@ -92,12 +116,12 @@ class GetOwnCreatures(serializers.Serializer):
 
 
 class RateCreatureSerializer(serializers.Serializer):
-    creature = GetCreatureSerializer(many=False)
-    pub_date = serializers.DateTimeField()
-    user = GetUserSerializer(many=False)
+    user_id = serializers.IntegerField()
     comment = serializers.CharField(
         required=False, allow_blank=True, max_length=255)
     rating=serializers.IntegerField(max_value=5, min_value=1)
 
 
 # class GetCreatureRatingSerializer(serializers.Serializer):
+#     creature = GetCreatureSerializer(many=False)
+#     average_rating =
