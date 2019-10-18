@@ -23,7 +23,7 @@ class User(models.Model):
     def check_password(self, password_plaintext):
         return check_password(password_plaintext, self._password)
 
-    # TODO: Add validation when creating player
+    # TODO: Add validation when creating user
     def set_password(self, password_plaintext):
         password_hashed = make_password(password_plaintext)
         self._password = password_hashed
@@ -32,7 +32,7 @@ class User(models.Model):
     # I would change this to 'creatures' since it will be used like
     # user.creatures instead of user.get_own_creatures()
     @property
-    def get_own_creatures(self):
+    def creatures(self):
         creatures = Creature.objects.filter(owner__id=self.id).all()
         return creatures
 
@@ -119,3 +119,41 @@ class Review(models.Model):
     pub_date = models.DateTimeField(auto_now=True)
     comment = models.CharField(max_length=200, blank=True)
     rating = models.IntegerField(choices=RATING_CHOICES)
+
+
+class Token(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=datetime.now, blank=True)
+    uuid = models.CharField(max_length=200, default=uuid4)
+    is_expired = models.BooleanField(default=False)
+
+    # This is an example of a FactoryMethod design pattern
+    # @classmethod
+    # def create(cls, user_id, is_expired):
+    #     instance = cls(uuid=uuid4(), user_id=user_id)
+    #     instance.save()
+    #     return instance
+
+
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    uuid = models.CharField(max_length=200, default=uuid4)
+    created_at = models.DateTimeField(default=datetime.now, blank=False)
+    was_used = models.BooleanField(default=False)
+
+    @property
+    def is_valid(self):
+        timedelta = datetime.now(timezone.utc) - self.created_at
+        return not self.was_used and timedelta.days < 1
+
+
+class CreateAccountToken(models.Model):
+    email = models.EmailField(max_length=254)
+    uuid = models.CharField(max_length=200, default=uuid4)
+    created_at = models.DateTimeField(default=datetime.now, blank=False)
+    was_used = models.BooleanField(default=False)
+
+    @property
+    def is_valid(self):
+        timedelta = datetime.now(timezone.utc) - self.created_at
+        return not self.was_used and timedelta.days < 1

@@ -1,6 +1,10 @@
 from rest_framework import serializers
 
-from creatder.models import Creature, Review, User
+from creatder.models import (
+    Creature, Review, User, Token, PasswordResetToken, CreateAccountToken)
+
+from creatder.services import (MinimumLengthValidator,
+    NumericPasswordValidator)
 
 
 class GetUserSerializer(serializers.Serializer):
@@ -112,7 +116,7 @@ class GetCreatureSerializer(serializers.Serializer):
 
 
 class GetOwnCreatures(serializers.Serializer):
-    get_own_creatures = GetCreatureSerializer(many=True)
+    creatures = GetCreatureSerializer(many=True)
 
 
 class RateCreatureSerializer(serializers.Serializer):
@@ -125,3 +129,88 @@ class RateCreatureSerializer(serializers.Serializer):
 # class GetCreatureRatingSerializer(serializers.Serializer):
 #     creature = GetCreatureSerializer(many=False)
 #     average_rating =
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(
+        required=True, allow_blank=False)
+    password = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+
+    def validate(self, data):
+        user = User.objects.filter(email=data['email']).first()
+        if not user:
+            raise serializers.ValidationError(
+                'Email dosn\'t exists in the database')
+        if not user.check_password(data['password']):
+            raise serializers.ValidationError(
+                'Password inncorect')
+        return data
+
+
+class TokenSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(read_only=True)
+    created_at = serializers.DateTimeField()
+    uuid = serializers.CharField(
+        required=True, allow_blank=False)
+    is_expired = serializers.BooleanField(read_only=True)
+
+
+class RegisterRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(
+            required=True, allow_blank=False)
+
+    def validate(self, data):
+        # TODO: make mail not case sensitive
+        user = User.objects.filter(email=data['email']).first()
+        if user:
+            raise serializers.ValidationError(
+                'Email already exists in the database')
+        return data
+
+
+class RegisterTokenSerializer(serializers.Serializer):
+    email = serializers.EmailField(
+            required=True, allow_blank=False)
+    created_at = serializers.DateTimeField()
+    uuid = serializers.CharField(
+        required=True, allow_blank=False)
+    was_used = serializers.BooleanField(read_only=True)
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(
+            required=True, allow_blank=False)
+
+    def validate(self, data):
+        user = User.objects.filter(email=data['email']).first()
+        if not user:
+            raise serializers.ValidationError(
+                'Email does not exist in the database')
+        return data
+
+
+class PasswordResetTokenSerializer(serializers.Serializer):
+    user = GetUserSerializer(many=False)
+    created_at = serializers.DateTimeField()
+    uuid = serializers.CharField(
+        required=True, allow_blank=False)
+    was_used = serializers.BooleanField(read_only=True)
+
+
+class PasswordUserSerializer(serializers.Serializer):
+    password = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+    password_repeat = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+
+    def validate(self, data):
+        if data['password'] != data['password_repeat']:
+            raise serializers.ValidationError('Passwords did not match.')
+        elif not MinimumLengthValidator.validate(data['password']):
+            raise serializers.ValidationError(
+                'Passwords must have at least 8 characters')
+        elif not NumericPasswordValidator.validate(data['password']):
+            raise serializers.ValidationError(
+                'Password must contain at least 1 digit')
+        return data
