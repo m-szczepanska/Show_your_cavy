@@ -62,23 +62,38 @@ def check_token_validity(cls, token_uuid):
 
 
 def send_user_register_mail(user_email, token):
-        server_email = 'sending.from.python@gmail.com'
-        server_email_password = 'gmail9393'
-        subject = 'Password Reset'
+    port = 25  # For SSL
+    server_email = 'sending.from.python@gmail.com'
+    server_email_password = 'gmail9393'
+    subject = 'Show your pig and rate other cavies!'
 
-        msg = MIMEMultipart()
-        msg['From'] = server_email
-        msg['To'] = user_email
-        msg['Subject'] = subject
-        # TODO: Make this text better
-        mail_contents = \
-            f'Reset token is file:///Users/marsza/workspace/zwierzu_front/register.html?token={token}'
-        msg.attach(MIMEText(mail_contents,'plain'))
-        text = msg.as_string()
 
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.ehlo()
-        server.starttls()
+    msg = MIMEMultipart()
+    msg['From'] = server_email
+    msg['To'] = user_email
+    msg['Subject'] = subject
+    mail_contents = \
+        f'To register go to the link - file:///Users/marsza/workspace/zwierzu_front/register.html?token={token}'
+    msg.attach(MIMEText(mail_contents, 'plain'))
+    text = msg.as_string()
+
+
+
+    # Create a secure SSL context
+    context = ssl.create_default_context()
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
+        # TODO: Send email here
+
+
+    # try:
+    #     context = ssl.create_default_context()
+    #     server = smtplib.SMTP('smtp.gmail.com', 587)
+    # server.ehlo()
+        # server.starttls(context=context)
+    # server.ehlo() # Can be omitted?
         server.login(server_email, server_email_password)
-        server.sendmail(server_email,user_email, text)
-        server.quit()
+        server.sendmail(server_email, user_email, text)
+        # server.quit()
+    # except ConnectionResetError:
+        # pass  # server.quit() always cries - but sends mails anyway so...

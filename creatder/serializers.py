@@ -54,8 +54,6 @@ class CreateUserSerializer(serializers.Serializer):
 class UpdateUserSerializer(serializers.Serializer):
     name = serializers.CharField(
         required=True, allow_blank=False, max_length=255)
-    login = serializers.CharField(
-        required=True, allow_blank=False, max_length=255)
     email = serializers.EmailField(
         required=True, allow_blank=False)
     about_myself = serializers.CharField(
@@ -132,16 +130,16 @@ class RateCreatureSerializer(serializers.Serializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField(
-        required=True, allow_blank=False)
+    login = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
     password = serializers.CharField(
         required=True, allow_blank=False, max_length=255)
 
     def validate(self, data):
-        user = User.objects.filter(email=data['email']).first()
+        user = User.objects.filter(login=data['login']).first()
         if not user:
             raise serializers.ValidationError(
-                'Email dosn\'t exists in the database')
+                'Login dosn\'t exists in the database')
         if not user.check_password(data['password']):
             raise serializers.ValidationError(
                 'Password inncorect')

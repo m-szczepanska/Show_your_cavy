@@ -13,23 +13,55 @@ from creatder.models import (
 from creatder.serializers import (GetCreatureSerializer,
     CreateCreatureSerializer, GetUserSerializer, CreateUserSerializer,
     UpdateUserSerializer, GetOwnCreatures, RateCreatureSerializer,
-    UpdateCreatureSerializer
+    UpdateCreatureSerializer, RegisterTokenSerializer, RegisterRequestSerializer,
+    TokenSerializer, LoginSerializer, PasswordResetRequestSerializer,
+    PasswordResetTokenSerializer, PasswordUserSerializer
     # GetCreatureRatingSerializer)
     )
 from creatder.services import (
     send_password_reset_mail, check_token_validity, send_user_register_mail,
     MinimumLengthValidator, NumericPasswordValidator)
 
-
+# @is_authorized
 @csrf_exempt
 def creature_list(request):
     """
     List all creatures.
     """
     if request.method == 'GET':
-        creatures = Creature.objects.all()
-        serializer = GetCreatureSerializer(creatures, many=True)
+        creatures_all = Creature.objects.all()
+        serializer = GetCreatureSerializer(creatures_all, many=True)
         return JsonResponse(serializer.data, safe=False)
+
+
+# @is_authorized
+@csrf_exempt
+def creature_list_paginated(request, page=1):
+    """
+    List all creatures.
+    Page size is 9 (hence magic 9s in the code).
+    """
+    # Ignore bad value for page and substitute 1
+    if page < 1 or type(page) != int:
+        page = 1
+
+    if request.method == 'GET':
+        creatures_all = Creature.objects.all()
+        creature_count = creatures_all.count()
+        # TODO: jeez fix this shit plis, miss; this is bad every 9 pigs
+        # This shows on frontend so we start at 1
+        max_page = (creatures_count // 9) + 1
+        upper_limit = min([page * 9, creature_count])
+        creatures = creatures_all[(page-1)*9:upper_limit]
+
+        serializer = GetCreatureSerializer(creatures, many=True)
+        resp = {
+            "objects": serializer.data(),
+            "page": page,
+            "max_page": max_page
+        }
+
+        return JsonResponse(resp, safe=False)
 
 
 @csrf_exempt
@@ -81,7 +113,6 @@ def user_details(request, id):
         if not serializer.is_valid():
             return JsonResponse(serializer.errors, status=400)
         user.name = data['name']
-        user.login = data['login']
         user.email = data['email']
         user.about_myself = data['about_myself']
         user.save()
@@ -130,12 +161,12 @@ def creature_details(request, id):
 
 
 @csrf_exempt
-def create_creature_to_owner(request, id):
+def create_creature(request, user_id):
     """
     Create new creature owned by registered user.
     """
     try:
-        user = User.objects.get(id=id)
+        user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return HttpResponse(status=404)
 
@@ -159,7 +190,7 @@ def create_creature_to_owner(request, id):
         return JsonResponse(serializer_return.data, safe=False, status=201)
 
 @csrf_exempt
-def creatures(request, id):
+def get_user_creatures(request, id):
     # change name to get_user_creaaures
     """
     Retrieve users creatures.
@@ -175,14 +206,14 @@ def creatures(request, id):
 
 # TODO: Only allow user to vote once on a creature; if they already voted
 # update the value on the existing vote
-@is_authorized
+# @is_authorized
 @csrf_exempt
-def rate_creature(request, creature_id):
+def rate_creature(request, id):
     """
     Rate a creature, also possible to add a comment.
     """
     try:
-        creature = Creature.objects.get(id=creature_id)
+        creature = Creature.objects.get(id=id)
     except Creature.DoesNotExist:
         return HttpResponse(status=404)
 
@@ -194,7 +225,7 @@ def rate_creature(request, creature_id):
 
         try:
             user = User.objects.get(id=data['user_id'])
-        except Creature.DoesNotExist:
+        except User.DoesNotExist:
             return HttpResponse(status=404)
 
         review = Review.objects.filter(
@@ -238,14 +269,14 @@ def login(request):
         if not serializer.is_valid():
             return JsonResponse(serializer.errors, status=400)
 
-        user = User.objects.get(email=data['email'])
+        user = User.objects.get(login=data['login'])
         token = Token(user_id=user.id)
         token.save()
         serializer_return = TokenSerializer(token)
         return JsonResponse(serializer_return.data, safe=False, status=201)
 
 
-@is_authorized
+# @is_authorized
 @csrf_exempt
 def logout(request):
     """
@@ -290,6 +321,7 @@ def register_view(request, token_uuid):
             return JsonResponse(check_result, status=403)
 
         else:
+            print('good token')
             data = JSONParser().parse(request)
             serializer = CreateUserSerializer(data=data)
             if not serializer.is_valid():

@@ -17,14 +17,14 @@ def is_authorized(func):
     def wrapper(request, *args, **kwargs):
         try:
             result = request.META.get('HTTP_AUTHORIZATION')
-
+            # import pdb; pdb.set_trace()
             if not result:
                 return JsonResponse({"error":"Wrong header"}, status=400)
             # {'HTTP_AUTHORIZATION': 'ID_PLAYER:UUID_TOKEN'}
             result_split = result.split(':')
             if not result_split:
                 return HttpResponse(status=400)
-            player_id = result_split[0]
+            user_id = result_split[0]
             uuid = result_split[1]
             token = Token.objects.get(uuid=uuid)
             if token.user_id != int(user_id):

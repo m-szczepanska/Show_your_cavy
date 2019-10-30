@@ -82,6 +82,7 @@ class Creature(models.Model):
         choices=COLOR_AND_PATTERN,
         default='MX'
     )
+    pub_date = models.DateTimeField(auto_now=True)
     crossed_rainbow_bridge = models.BooleanField(default=False, blank=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
 
