@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
 from creatder.models import (
-    Creature, Review, User, Token, PasswordResetToken, CreateAccountToken)
+    Creature, Review, User, Token, PasswordResetToken, CreateAccountToken,
+    File)
 
 from creatder.services import (MinimumLengthValidator,
     NumericPasswordValidator)
@@ -17,7 +18,7 @@ class GetUserSerializer(serializers.Serializer):
         required=True, allow_blank=False)
     about_myself = serializers.CharField(
         required=False, allow_blank=True, max_length=255)
-    # see if putting "creatures" here works
+
 
 
 class CreateUserSerializer(serializers.Serializer):
@@ -62,6 +63,7 @@ class UpdateUserSerializer(serializers.Serializer):
     def validate(self, data):
         user = User.objects.filter(email=data['email']).first()
         if user and user.id != self.instance.id:
+            print(user.id, self.instance.id)
             raise serializers.ValidationError(
                 'User with this email already exists.')
         return data
@@ -79,7 +81,6 @@ class CreateCreatureSerializer(serializers.Serializer):
         required=True, allow_blank=False, max_length=255)
     crossed_rainbow_bridge = serializers.BooleanField(
         required=False)
-    owner = GetUserSerializer(many=False)
 
 
 class UpdateCreatureSerializer(serializers.Serializer):
@@ -110,23 +111,30 @@ class GetCreatureSerializer(serializers.Serializer):
     crossed_rainbow_bridge = serializers.BooleanField(
         required=False)
     average_rating = serializers.FloatField(read_only=True)
+    creature_card_photo = serializers.CharField(
+        required=True, allow_blank=False, max_length=255)
+    pub_date = serializers.DateTimeField()
     owner = GetUserSerializer(many=False)
-
-
-class GetOwnCreatures(serializers.Serializer):
-    creatures = GetCreatureSerializer(many=True)
 
 
 class RateCreatureSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()
     comment = serializers.CharField(
-        required=False, allow_blank=True, max_length=255)
+        required=False, allow_blank=True, max_length=200)
     rating=serializers.IntegerField(max_value=5, min_value=1)
 
 
-# class GetCreatureRatingSerializer(serializers.Serializer):
-#     creature = GetCreatureSerializer(many=False)
-#     average_rating =
+class GetUserRatingsSerializer(serializers.Serializer):
+    creature = GetCreatureSerializer(many=False)
+    user_id = serializers.IntegerField()
+    pub_date = serializers.DateTimeField()
+    comment = serializers.CharField(
+        required=False, allow_blank=True, max_length=200)
+    rating=serializers.IntegerField(max_value=5, min_value=1)
+
+class SearchCreatureSerializer(serializers.Serializer):
+    search_field = serializers.CharField(
+        required=False, allow_blank=True, max_length=40)
 
 
 class LoginSerializer(serializers.Serializer):
@@ -212,3 +220,24 @@ class PasswordUserSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 'Password must contain at least 1 digit')
         return data
+
+
+class FileSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = File
+        fields = "__all__"
+
+# class FileSerializer(serializers.Serializer):
+#     id = serializers.IntegerField(read_only=True)
+#     file = serializers.FileField(
+#         max_length=None, allow_empty_file=False, use_url=False)
+#     creature_id = serializers.IntegerField(read_only=True)
+#
+#     def create(self, validated_data):
+#         return File.objects.create(**validated_data)
+#
+#     def update(self, instance, validated_data):
+#         instance.file = validated_data.get('file', instance.file)
+#         instance.save()
+#         return instance

@@ -44,47 +44,50 @@ class User(models.Model):
 
 class Creature(models.Model):
     BREED = [
-        ('OT', 'Other'),
-        ('AM', 'American'),
-        ('AB', 'Abyssinian'),
-        ('HR', 'Hairless'),
-        ('HI', 'Himalayan'),
-        ('PR', 'Peruvian'),
-        ('RX', 'Rex'),
-        ('SL', 'Silkie'),
-        ('TD', 'Teddy'),
-        ('WD', 'White-crested')
+        ('Other', 'Other'),
+        ('American', 'American'),
+        ('Abyssinian', 'Abyssinian'),
+        ('Hairless', 'Hairless'),
+        ('Himalayan', 'Himalayan'),
+        ('Peruvian', 'Peruvian'),
+        ('Rex', 'Rex'),
+        ('Silkie', 'Silkie'),
+        ('Teddy', 'Teddy'),
+        ('White-crested', 'White-crested')
     ]
     COLOR_AND_PATTERN = [
-        ('BL', 'Self-Black'),
-        ('WH', 'Self-White'),
-        ('RD', 'Self-Red'),
-        ('CR', 'Self-Cream'),
-        ('CH', 'Agouti-Chocolate'),
-        ('AG', 'Agouti-Golde'),
-        ('AV', 'Agouti-Silver'),
-        ('AC', 'Agouti-Cream'),
-        ('WB', 'White-black'),
-        ('WR', 'White-red'),
-        ('SB', 'Red-black'),
-        ('WC', 'White-cream'),
-        ('BR', 'Brindle'),
-        ('MX', 'Mix'),
-        ('AL', 'Albino')
+        ('Self-Black', 'Self-Black'),
+        ('Self-White', 'Self-White'),
+        ('Self-Red', 'Self-Red'),
+        ('Self-Cream', 'Self-Cream'),
+        ('Agouti-Chocolate', 'Agouti-Chocolate'),
+        ('Agouti-Golde', 'Agouti-Golde'),
+        ('Agouti-Silver', 'Agouti-Silver'),
+        ('Agouti-Cream', 'Agouti-Cream'),
+        ('White-Black', 'White-Black'),
+        ('White-Red', 'White-Red'),
+        ('Red-Black', 'Red-Black'),
+        ('White-Cream', 'White-Cream'),
+        ('Brindle', 'Brindle'),
+        ('Mix', 'Mix'),
+        ('Albino', 'Albino')
     ]
-    SEX = [('F', 'Female'), ('M', 'Male'), ('NS', 'Not sure')]
+    SEX = [('Female', 'Female'), ('Male', 'Male'), ('Not sure', 'Not sure')]
     name = models.CharField(max_length=255)
     age = models.IntegerField()
-    sex = models.CharField(max_length=2, choices=SEX, default='F')
-    breed = models.CharField(max_length=2, choices=BREED, default='OT')
+    sex = models.CharField(max_length=8, choices=SEX, default='Female')
+    breed = models.CharField(max_length=15, choices=BREED, default='Other')
     color_pattern = models.CharField(
-        max_length=2,
+        max_length=20,
         choices=COLOR_AND_PATTERN,
-        default='MX'
+        default='Mix'
     )
-    pub_date = models.DateTimeField(auto_now=True)
+    pub_date = models.DateTimeField(auto_now_add=True)
     crossed_rainbow_bridge = models.BooleanField(default=False, blank=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
+
+    class Meta:
+        ordering = ['-pub_date']
 
     def __unicode__(self):
         return self.name
@@ -103,6 +106,16 @@ class Creature(models.Model):
         else:
             result = 0
         return result
+
+    @property
+    def creature_photos(self):
+        all_photos = File.objects.filter(creature__id=self.id)
+        return all_photos
+
+    @property
+    def creature_card_photo(self):
+        card_photo = File.objects.filter(creature__id=self.id).first()
+        return card_photo
 
 
 class Review(models.Model):
@@ -158,3 +171,11 @@ class CreateAccountToken(models.Model):
     def is_valid(self):
         timedelta = datetime.now(timezone.utc) - self.created_at
         return not self.was_used and timedelta.days < 1
+
+
+class File(models.Model):
+    file = models.FileField(blank=False, null=False)
+    creature = models.ForeignKey(Creature, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.file.name

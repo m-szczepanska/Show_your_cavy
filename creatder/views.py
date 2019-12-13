@@ -1,26 +1,29 @@
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework.parsers import JSONParser
+from django.db.models import Q
 
 from rest_framework.views import APIView
+from rest_framework.parsers import JSONParser, MultiPartParser, FormParser, FileUploadParser
 from rest_framework.response import Response
-from rest_framework import authentication, permissions
+from rest_framework import authentication, permissions, status
 
-from creatder.decorators import is_authorized
+
+from creatder.decorators import is_authorized, is_authorized_photo
 from creatder.models import (
-    Creature, Review, User, Token, PasswordResetToken, CreateAccountToken
+    Creature, Review, User, Token, PasswordResetToken, CreateAccountToken, File
     )
 from creatder.serializers import (GetCreatureSerializer,
     CreateCreatureSerializer, GetUserSerializer, CreateUserSerializer,
-    UpdateUserSerializer, GetOwnCreatures, RateCreatureSerializer,
+    UpdateUserSerializer, RateCreatureSerializer,GetUserRatingsSerializer,
     UpdateCreatureSerializer, RegisterTokenSerializer, RegisterRequestSerializer,
     TokenSerializer, LoginSerializer, PasswordResetRequestSerializer,
-    PasswordResetTokenSerializer, PasswordUserSerializer
-    # GetCreatureRatingSerializer)
-    )
+    PasswordResetTokenSerializer, PasswordUserSerializer,
+    FileSerializer, SearchCreatureSerializer)
+
 from creatder.services import (
     send_password_reset_mail, check_token_validity, send_user_register_mail,
-    MinimumLengthValidator, NumericPasswordValidator)
+    MinimumLengthValidator, NumericPasswordValidator, delete_pig_photo)
+
 
 # @is_authorized
 @csrf_exempt
@@ -34,7 +37,7 @@ def creature_list(request):
         return JsonResponse(serializer.data, safe=False)
 
 
-# @is_authorized
+
 @csrf_exempt
 def creature_list_paginated(request, page=1):
     """
@@ -50,13 +53,17 @@ def creature_list_paginated(request, page=1):
         creature_count = creatures_all.count()
         # TODO: jeez fix this shit plis, miss; this is bad every 9 pigs
         # This shows on frontend so we start at 1
-        max_page = (creatures_count // 9) + 1
+        if (creature_count % 9) == 0:
+            max_page = (creature_count // 9)
+        else:
+            max_page = (creature_count // 9) + 1
+
         upper_limit = min([page * 9, creature_count])
         creatures = creatures_all[(page-1)*9:upper_limit]
 
         serializer = GetCreatureSerializer(creatures, many=True)
         resp = {
-            "objects": serializer.data(),
+            "objects": serializer.data,
             "page": page,
             "max_page": max_page
         }
@@ -91,7 +98,7 @@ def user_list(request):
         serializer_return = GetUserSerializer(new_user)
         return JsonResponse(serializer_return.data, safe=False, status=201)
 
-
+# @is_authorized
 @csrf_exempt
 def user_details(request, id):
     """
@@ -107,7 +114,6 @@ def user_details(request, id):
         return JsonResponse(serializer.data)
 
     elif request.method == 'PUT':
-        # No changing passwords here!
         data = JSONParser().parse(request)
         serializer = UpdateUserSerializer(user, data=data)
         if not serializer.is_valid():
@@ -125,6 +131,7 @@ def user_details(request, id):
         return HttpResponse(status=204)
 
 
+# @is_authorized
 @csrf_exempt
 def creature_details(request, id):
     """
@@ -160,6 +167,7 @@ def creature_details(request, id):
         return HttpResponse(status=204)
 
 
+@is_authorized
 @csrf_exempt
 def create_creature(request, user_id):
     """
@@ -182,6 +190,7 @@ def create_creature(request, user_id):
             sex=data['sex'],
             breed=data['breed'],
             color_pattern=data['color_pattern'],
+            crossed_rainbow_bridge=data['crossed_rainbow_bridge'],
             owner=user
         )
         new_creature.save()
@@ -189,24 +198,44 @@ def create_creature(request, user_id):
         serializer_return = GetCreatureSerializer(new_creature)
         return JsonResponse(serializer_return.data, safe=False, status=201)
 
+@is_authorized
 @csrf_exempt
 def get_user_creatures(request, id):
-    # change name to get_user_creaaures
     """
     Retrieve users creatures.
+    """
+    try:
+        owner = User.objects.get(id=id)
+    except User.DoesNotExist:
+        return HttpResponse(status=404)
+
+    creatures = Creature.objects.filter(owner=owner)
+
+    serializer = GetCreatureSerializer(creatures, many=True)
+    return JsonResponse(serializer.data, safe=False)
+
+
+@csrf_exempt
+def user_ratings(request, id):
+    """
+    Retrieve user ratings.
     """
     try:
         user = User.objects.get(id=id)
     except User.DoesNotExist:
         return HttpResponse(status=404)
 
-    serializer = GetOwnCreatures(user.creatures)
-    return JsonResponse(serializer.data)
+    get_user_ratings = Review.objects.filter(
+        user__id=user.id)
+
+    if request.method == 'GET':
+        serializer = GetUserRatingsSerializer(get_user_ratings, many=True)
+        return JsonResponse(serializer.data, safe=False)
 
 
 # TODO: Only allow user to vote once on a creature; if they already voted
 # update the value on the existing vote
-# @is_authorized
+@is_authorized
 @csrf_exempt
 def rate_creature(request, id):
     """
@@ -246,16 +275,7 @@ def rate_creature(request, id):
         return JsonResponse(serializer_return.data, safe=False, status=201)
 
 
-@csrf_exempt
-def user_ratings(request, id):
-    try:
-        user = User.objects.get(id=id)
-    except User.DoesNotExist:
-        return HttpResponse(status=404)
 
-    if request.method == 'GET':
-        serializer = GetUserRatingsSerializer(user)
-        return JsonResponse(serializer.data)
 
 
 @csrf_exempt
@@ -276,7 +296,7 @@ def login(request):
         return JsonResponse(serializer_return.data, safe=False, status=201)
 
 
-# @is_authorized
+@is_authorized
 @csrf_exempt
 def logout(request):
     """
@@ -375,3 +395,99 @@ def reset_password_view(request, token_uuid):
         user.set_password(data['password'])  # also saves the instance
         serializer_return = GetUserSerializer(user)
         return JsonResponse(serializer_return.data, safe=False, status=201)
+
+
+@csrf_exempt
+def search_creature(request):
+    if request.method == 'POST':
+        data = JSONParser().parse(request)
+        serializer = SearchCreatureSerializer(data=data)
+
+        creatures = Creature.objects.filter(
+            Q(name__icontains=data['search_field']) |
+            Q(breed__icontains=data['search_field'])
+        )
+        serializer_return = GetCreatureSerializer(creatures, many=True)
+        return JsonResponse(serializer_return.data, safe=False, status=201)
+
+
+
+
+class FileUploadView(APIView):
+    """
+    Retrieve all photos or upload a photo.
+    """
+    parser_class = (MultiPartParser, FormParser)
+
+    @is_authorized_photo
+    def get(self, request, creature_id, *args, **kwargs):
+        try:
+            creature = Creature.objects.get(id=creature_id)
+        except Creature.DoesNotExist:
+            return HttpResponse(status=404)
+
+        files = File.objects.filter(creature__id=creature.id)
+        file_serializer = FileSerializer(files, many=True)
+        return Response(file_serializer.data)
+
+    def post(self, request, creature_id, *args, **kwargs):
+
+        try:
+            creature = Creature.objects.get(id=creature_id)
+        except Creature.DoesNotExist:
+            return HttpResponse(status=404)
+        # Weird stuff; has to be 'creture' field for it's integer value
+        request.data.update({'creature': creature.id})
+
+        file_serializer = FileSerializer(data=request.data)
+
+        if file_serializer.is_valid():
+            file_serializer.save()
+            return Response(file_serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class FileUploadDetails(APIView):
+    """
+    Retrieve, update or delete a photo instance.
+    """
+    # @is_authorized
+    def get_object(self, id, creature_id):
+        # import pdb; pdb.set_trace()
+        try:
+            creature = Creature.objects.get(id=id)
+        except Creature.DoesNotExist:
+            return HttpResponse(status=404)
+
+        try:
+            return File.objects.filter(
+                id=id, creature__id=creature.id).first()
+        except File.DoesNotExist:
+            return HttpResponse(status=404)
+
+    # @is_authorized
+    def get(self, request, id, creature_id):
+        file = self.get_object(id, creature_id)
+        serializer = FileSerializer(file)
+        return Response(serializer.data)
+
+    # @is_authorized
+    # def put(self, request, id, creature_id):
+    #     file = self.get_object(id, creature_id)
+    #     serializer = FileSerializer(file, data=request.data)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @is_authorized
+    def delete(self, request, id, creature_id, format=None):
+        try:
+            file = File.objects.filter(id=id, creature__id=creature_id).first()
+        except File.DoesNotExist:
+            return HttpResponse(status=404)
+
+        file.delete()
+        delete_pig_photo(file)
+        return Response(status=status.HTTP_204_NO_CONTENT)

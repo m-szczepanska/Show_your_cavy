@@ -1,4 +1,5 @@
 import smtplib, ssl
+import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from django.core.exceptions import ValidationError
@@ -32,11 +33,11 @@ def send_password_reset_mail(user_email, token):
     msg['Subject'] = subject
     # TODO: Make this text better
     mail_contents = \
-        f'Reset token is file:///Users/marsza/workspace/zwierzu_front/register.html?token={token}'
+        f'Click this link to set your new password on Squeakoo --> file:///Users/marsza/workspace/zwierzu_front/password_reset.html?token={token}'
     msg.attach(MIMEText(mail_contents,'plain'))
     text = msg.as_string()
 
-    server = smtplib.SMTP('smtp.gmail.com', 2525)
+    server = smtplib.SMTP('smtp.gmail.com', 587)
     server.ehlo()
     server.starttls()
     server.login(server_email, server_email_password)
@@ -72,7 +73,7 @@ def send_user_register_mail(user_email, token):
         msg['Subject'] = subject
         # TODO: Make this text better
         mail_contents = \
-            f'Reset token is file:///Users/marsza/workspace/zwierzu_front/register.html?token={token}'
+            f'Click this link to create your account on Squeakoo --> file:///Users/marsza/workspace/zwierzu_front/register.html?token={token}'
         msg.attach(MIMEText(mail_contents,'plain'))
         text = msg.as_string()
 
@@ -82,3 +83,14 @@ def send_user_register_mail(user_email, token):
         server.login(server_email, server_email_password)
         server.sendmail(server_email,user_email, text)
         server.quit()
+
+
+
+def delete_pig_photo(pig_photo):
+
+    print('print', pig_photo)
+
+    if os.path.exists(f'/Users/marsza/workspace/media/{pig_photo}'):
+        os.remove(f'/Users/marsza/workspace/media/{pig_photo}')
+    else:
+        print("The file does not exist")
