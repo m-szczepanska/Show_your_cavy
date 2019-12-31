@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
@@ -439,8 +441,15 @@ class FileUploadView(APIView):
         # Weird stuff; has to be 'creture' field for it's integer value
         request.data.update({'creature': creature.id})
 
-        file_serializer = FileSerializer(data=request.data)
+        # Add a good-enough unique-ish suffix to file name, before the extension
+        if len(request.data['file'].name) < 4:
+            return HttpResponse(status=400)
+        file_name_split = [
+            request.data['file'].name[:-4], request.data['file'].name[-4:]]
+        file_name_split[0] += '_' + str(uuid4())[:8]
+        request.data['file'].name = ''.join(file_name_split)
 
+        file_serializer = FileSerializer(data=request.data)
         if file_serializer.is_valid():
             file_serializer.save()
             return Response(file_serializer.data, status=status.HTTP_201_CREATED)
@@ -481,7 +490,7 @@ class FileUploadDetails(APIView):
     #         return Response(serializer.data)
     #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @is_authorized
+    @is_authorized_photo
     def delete(self, request, id, creature_id, format=None):
         try:
             file = File.objects.filter(id=id, creature__id=creature_id).first()
