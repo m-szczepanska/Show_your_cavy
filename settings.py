@@ -150,3 +150,6 @@ REST_FRAMEWORK = {
     # or allow read-only access for unauthenticated users.
     'TEST_REQUEST_DEFAULT_FORMAT': 'json'
 }
+
+# For sending account activation mail
+DOMAIN_URL = 'http://YOUR_DOMAIN' 

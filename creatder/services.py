@@ -1,8 +1,16 @@
 import smtplib, ssl
 import os
+import sys
+
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
 from django.core.exceptions import ValidationError
+try:
+    from production import DOMAIN_URL
+except ImportError:
+    print('You should create a production.py settings file.')
+    from settings import DOMAIN_URL
 
 
 class MinimumLengthValidator:
@@ -32,9 +40,8 @@ def send_password_reset_mail(user_email, token):
     msg['To'] = user_email
     msg['Subject'] = subject
     # TODO: Make this text better
-    mail_contents = \
-        f'Click this link to set your new password on Squeakoo --> file:///Users/marsza/workspace/zwierzu_front/password_reset.html?token={token}'
-    msg.attach(MIMEText(mail_contents,'plain'))
+    mail_contents = f'<html><body><h1>Squeakoo Password Reset</h1><br><p>Click <a href="{DOMAIN_URL}/password_reset.html?token={token}">here</a> to set your new password on Squeakoo</p></body></html>'
+    msg.attach(MIMEText(mail_contents,'html', 'utf-8'))
     text = msg.as_string()
 
     server = smtplib.SMTP('smtp.gmail.com', 587)

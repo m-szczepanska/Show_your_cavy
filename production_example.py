@@ -1,8 +1,11 @@
 from settings import *
 
 
-ALLOWED_HOSTS.append("http://your_public_dns_ipv4,your_public_dns_ipv4")
-ALLOWED_HOSTS.append("*")
+DOMAIN_URL = 'YOUR_DOMAIN_GOES_HERE'
+
+# Yes, the domain name here is repeated twice; Nginx magic
+ALLOWED_HOSTS.append(f'http://{DOMAIN_URL},{DOMAIN_URL}')
+ALLOWED_HOSTS.append('*')
 
 DATABASES = {
     'default': {

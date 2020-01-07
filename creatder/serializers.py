@@ -1,3 +1,5 @@
+from validate_email import validate_email
+
 from rest_framework import serializers
 
 from creatder.models import (
@@ -38,18 +40,23 @@ class CreateUserSerializer(serializers.Serializer):
     def validate(self, data):
         if data['password'] != data['password_repeat']:
             raise serializers.ValidationError('Passwords did not match.')
-        # elif not MinimumLengthValidator.validate(data['password']):
-        #     raise serializers.ValidationError(
-        #         'Passwords must have at least 8 characters')
-        # elif not NumericPasswordValidator.validate(data['password']):
-        #     raise serializers.ValidationError(
-        #         'Password must contain at least 1 digit')
+        elif not MinimumLengthValidator.validate(data['password']):
+            raise serializers.ValidationError(
+                'Passwords must have at least 8 characters')
+        elif not NumericPasswordValidator.validate(data['password']):
+            raise serializers.ValidationError(
+                'Password must contain at least 1 digit')
 
         user = User.objects.filter(email=data['email']).first()
         if user:
             raise serializers.ValidationError(
                 'User with this email already exists.')
         return data
+
+        email_is_valid = validate_email(data['email'])
+        if not email_is_valid:
+            raise serializers.ValidationError('Email adress is not valid.')
+
 
 
 class UpdateUserSerializer(serializers.Serializer):
@@ -67,6 +74,10 @@ class UpdateUserSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 'User with this email already exists.')
         return data
+
+        email_is_valid = validate_email(data['email'])
+        if not email_is_valid:
+            raise serializers.ValidationError('Email adress is not valid.')
 
 
 class CreateCreatureSerializer(serializers.Serializer):
@@ -132,6 +143,7 @@ class GetUserRatingsSerializer(serializers.Serializer):
         required=False, allow_blank=True, max_length=200)
     rating=serializers.IntegerField(max_value=5, min_value=1)
 
+
 class SearchCreatureSerializer(serializers.Serializer):
     search_field = serializers.CharField(
         required=False, allow_blank=True, max_length=40)
@@ -174,6 +186,10 @@ class RegisterRequestSerializer(serializers.Serializer):
                 'Email already exists in the database')
         return data
 
+        email_is_valid = validate_email(data['email'])
+        if not email_is_valid:
+            raise serializers.ValidationError('Email adress is not valid.')
+
 
 class RegisterTokenSerializer(serializers.Serializer):
     email = serializers.EmailField(
@@ -194,6 +210,10 @@ class PasswordResetRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 'Email does not exist in the database')
         return data
+
+        email_is_valid = validate_email(data['email'])
+        if not email_is_valid:
+            raise serializers.ValidationError('Email adress is not valid.')
 
 
 class PasswordResetTokenSerializer(serializers.Serializer):
