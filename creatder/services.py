@@ -7,10 +7,10 @@ from email.mime.multipart import MIMEMultipart
 
 from django.core.exceptions import ValidationError
 try:
-    from production import DOMAIN_URL
+    from production import DOMAIN_URL, EMAIL_PASS
 except ImportError:
     print('You should create a production.py settings file.')
-    from settings import DOMAIN_URL
+    from settings import DOMAIN_URL, EMAIL_PASS
 
 
 class MinimumLengthValidator:
@@ -40,7 +40,7 @@ def send_password_reset_mail(user_email, token):
     msg['To'] = user_email
     msg['Subject'] = subject
     # TODO: Make this text better
-    mail_contents = f'<html><body><h1>Squeakoo Password Reset</h1><br><p>Click <a href="{DOMAIN_URL}/password_reset.html?token={token}">here</a> to set your new password on Squeakoo</p></body></html>'
+    mail_contents = f'<html><body><h1>Squeakoo Password Reset</h1><br><p>Dear Squekoo User, <br>Click <a href="{DOMAIN_URL}/password_reset.html?token={token}">here</a> to set your new password on Squeakoo</p></body></html>'
     msg.attach(MIMEText(mail_contents,'html', 'utf-8'))
     text = msg.as_string()
 
@@ -79,8 +79,7 @@ def send_user_register_mail(user_email, token):
         msg['To'] = user_email
         msg['Subject'] = subject
         # TODO: Make this text better
-        mail_contents = \
-            f'Click this link to create your account on Squeakoo --> file:///Users/marsza/workspace/zwierzu_front/register.html?token={token}'
+        mail_contents = f'<html><body><h1>Show your piggs on Squekoo</h1><br><p>Dear Squekoo User, <br>Click <a href="{DOMAIN_URL}/register.html?token={token}">here</a> to create a new account.</p></body></html>'
         msg.attach(MIMEText(mail_contents,'plain'))
         text = msg.as_string()
 
