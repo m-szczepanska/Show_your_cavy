@@ -154,5 +154,3 @@ REST_FRAMEWORK = {
 # For sending account activation and reset password mail
 DOMAIN_URL = 'http://YOUR_DOMAIN'
 EMAIL_PASS = 'youremailpassword'
-
-EMAIL_PASS = 'GmailP4ss'

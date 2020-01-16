@@ -32,7 +32,7 @@ class NumericPasswordValidator:
 
 def send_password_reset_mail(user_email, token):
     server_email = 'sending.from.python@gmail.com'
-    server_email_password = 'gmail9393'
+    server_email_password = EMAIL_PASS
     subject = 'Password Reset'
 
     msg = MIMEMultipart()
@@ -71,7 +71,7 @@ def check_token_validity(cls, token_uuid):
 
 def send_user_register_mail(user_email, token):
         server_email = 'sending.from.python@gmail.com'
-        server_email_password = 'gmail9393'
+        server_email_password = EMAIL_PASS
         subject = 'Password Reset'
 
         msg = MIMEMultipart()
