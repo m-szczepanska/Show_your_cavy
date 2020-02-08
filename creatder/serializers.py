@@ -42,10 +42,10 @@ class CreateUserSerializer(serializers.Serializer):
             raise serializers.ValidationError('Passwords did not match.')
         elif not MinimumLengthValidator.validate(data['password']):
             raise serializers.ValidationError(
-                'Passwords must have at least 8 characters')
+                'Passwords must have at least 8 characters.')
         elif not NumericPasswordValidator.validate(data['password']):
             raise serializers.ValidationError(
-                'Password must contain at least 1 digit')
+                'Password must contain at least 1 digit.')
 
         user = User.objects.filter(email=data['email']).first()
         if user:
@@ -55,7 +55,7 @@ class CreateUserSerializer(serializers.Serializer):
 
         email_is_valid = validate_email(data['email'])
         if not email_is_valid:
-            raise serializers.ValidationError('Email adress is not valid.')
+            raise serializers.ValidationError('Enter a valid email address.')
 
 
 

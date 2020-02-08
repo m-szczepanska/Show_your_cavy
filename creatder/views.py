@@ -53,8 +53,7 @@ def creature_list_paginated(request, page=1):
     if request.method == 'GET':
         creatures_all = Creature.objects.all()
         creature_count = creatures_all.count()
-        # TODO: jeez fix this shit plis, miss; this is bad every 9 pigs
-        # This shows on frontend so we start at 1
+
         if (creature_count % 9) == 0:
             max_page = (creature_count // 9)
         else:
@@ -63,6 +62,9 @@ def creature_list_paginated(request, page=1):
         upper_limit = min([page * 9, creature_count])
         creatures = creatures_all[(page-1)*9:upper_limit]
 
+        if page > max_page:
+            return HttpResponse(status=404)
+            
         serializer = GetCreatureSerializer(creatures, many=True)
         resp = {
             "objects": serializer.data,
